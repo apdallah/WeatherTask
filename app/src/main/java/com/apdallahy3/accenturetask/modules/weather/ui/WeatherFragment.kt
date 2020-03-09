@@ -65,7 +65,7 @@ class WeatherFragment : Fragment(), SaveClickListner {
         })
         if (checkPermissions()) {
             if (isLocationEnabled()) {
-                viewModel.fetchLocation()
+                viewModel.setLocationUpdateListener()
 
             } else {
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
