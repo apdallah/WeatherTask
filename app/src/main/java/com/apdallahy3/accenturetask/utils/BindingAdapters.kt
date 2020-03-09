@@ -6,7 +6,6 @@ import androidx.databinding.BindingAdapter
 import com.apdallahy3.accenturetask.R
 import com.apdallahy3.accenturetask.data.source.remote.ApiConstants
 import com.bumptech.glide.Glide
-import com.squareup.picasso.Picasso
 
 @BindingAdapter("iconID", "error")
 fun loadImage(view: ImageView, icon: String?, error: Drawable) {
