@@ -94,9 +94,24 @@ class WeatherFragment : Fragment(), SaveClickListner {
         viewModel.getWeatherData().observe(viewLifecycleOwner, Observer { data ->
             data?.let { list ->
                 list.forEach { it.temp = viewModel.getCelsiusFromKelvin(it.temp) }
-                dataList.clear()
-                dataList.addAll(list)
-                adapter.notifyDataSetChanged()
+
+                //added items
+                val result = (list - dataList)
+                result.forEach {
+                    dataList.add(it)
+                    adapter.notifyItemChanged(dataList.indexOf(it))
+                }
+
+                //removed items
+                val removed = dataList - list
+                removed.forEach {
+                    val index = dataList.indexOf(it)
+                    dataList.remove(it)
+                    adapter.notifyItemRemoved(index)
+
+                }
+
+
             }
 
 
@@ -108,13 +123,22 @@ class WeatherFragment : Fragment(), SaveClickListner {
         val args = Bundle()
         args.putParcelable("weather", model)
         fragment.arguments = args
+
         if (view_type)
-            activity!!.supportFragmentManager.beginTransaction().replace(
+            activity!!.supportFragmentManager.beginTransaction().setCustomAnimations(
+                R.anim.fade_in,
+                R.anim.fade_out, R.anim.fade_in,
+                R.anim.fade_out
+            ).replace(
                 R.id.details,
                 fragment
             ).commit()
         else
-            activity!!.supportFragmentManager.beginTransaction().add(
+            activity!!.supportFragmentManager.beginTransaction().setCustomAnimations(
+                R.anim.fade_in,
+                R.anim.fade_out, R.anim.fade_in,
+                R.anim.fade_out
+            ).add(
                 R.id.container,
                 fragment
             ).addToBackStack("details").commit()
