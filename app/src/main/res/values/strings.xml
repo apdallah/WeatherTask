@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Weather Logger</string>
+
+    <string name="retry">Retry again</string>
+    <string name="yes">Yes</string>
+    <string name="ok">Ok</string>
+    <string name="temprture">Temperature: </string>
+    <string name="date">Date: </string>
+    <string name="more_details">More Details... </string>
+    <string name="no">No</string>
+     <string name="wait">Please Wait...</string>
+    <string name="erorr">Something Went Wrong!!</string>
+
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
