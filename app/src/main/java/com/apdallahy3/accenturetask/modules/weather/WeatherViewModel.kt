@@ -3,15 +3,17 @@ package com.apdallahy3.accenturetask.modules.weather
 import android.location.Location
 import android.location.LocationManager
 import android.os.Looper
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import com.apdallahy3.accenturetask.data.reposiories.WeatherRepository
 import com.apdallahy3.accenturetask.data.source.local.entities.WeatherModel
-import com.apdallahy3.accenturetask.koin.viewModule
 import com.gambia.android.base.BaseViewModel
 import com.google.android.gms.location.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 
 class WeatherViewModel(val repository: WeatherRepository) : BaseViewModel() {
@@ -20,10 +22,8 @@ class WeatherViewModel(val repository: WeatherRepository) : BaseViewModel() {
     val locationNotEnabled = MutableLiveData<Boolean>()
     lateinit var fusedLocation: FusedLocationProviderClient
     lateinit var locationManager: LocationManager
-    var weatherModel = MutableLiveData<WeatherModel>()
-    val weatherResource = Transformations.switchMap(lastLocation) {
-        repository.getWeeatherData(it)
-    }
+    private var viewModelJob = Job()
+    private val ioScope = CoroutineScope(Dispatchers.IO + viewModelJob)
 
     val locationSettingRequest = LocationSettingsRequest.Builder()
         .addLocationRequest(buildLocationRequest())
@@ -43,8 +43,20 @@ class WeatherViewModel(val repository: WeatherRepository) : BaseViewModel() {
 
         }
     }
+    //get Weather Form Db
+    fun getWeatherData(): LiveData<List<WeatherModel>> {
+        return repository.getLatestWeatherInfo()
+    }
+
+    //remove Weather from DB
+    fun removeWeatherModel(model: WeatherModel) {
+        ioScope.launch {
+            repository.removeModel(model)
+        }
+    }
 
 
+    //Location updates
     fun stopLocationUpdates() {
         fusedLocation.removeLocationUpdates(locationCallback)
     }
@@ -59,7 +71,6 @@ class WeatherViewModel(val repository: WeatherRepository) : BaseViewModel() {
     }
 
     private fun buildLocationRequest(): LocationRequest {
-
         return LocationRequest()
             .setNumUpdates(1)
             .setExpirationDuration(60000)
@@ -69,24 +80,23 @@ class WeatherViewModel(val repository: WeatherRepository) : BaseViewModel() {
 
     }
 
-    fun getWeatherModel(): WeatherModel? = weatherModel.value
-    fun setWeatherModel(model: WeatherModel?) {
-        weatherModel.postValue(model)
-    }
-
     fun fetchLocation() {
         fusedLocation.lastLocation
             .addOnSuccessListener { location: Location? ->
 
                 location?.let {
-                    getWeatherInfo(it)
+                    fetchWeatherInfo(it)
                 }
 
             }
     }
-
-    fun getWeatherInfo(location: Location) {
+    //Fetch Weather from API
+    fun fetchWeatherInfo(location: Location) {
         lastLocation.postValue(location)
+    }
+    //use transformations to get data from api
+    val weatherResource = Transformations.switchMap(lastLocation) {
+        repository.getWeeatherData(it)
     }
 
     fun getCelsiusFromKelvin(fahrenheit: Double?): Double {
@@ -95,5 +105,10 @@ class WeatherViewModel(val repository: WeatherRepository) : BaseViewModel() {
         }
         return 0.0
 
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        viewModelJob.cancel()
     }
 }

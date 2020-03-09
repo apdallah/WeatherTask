@@ -12,10 +12,10 @@ import java.util.*
 @Entity(tableName = "weather_table")
 data class WeatherModel(
 
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id")
     @NotNull
-    var id: Int,
+    var id: Long = 0L,
     var name: String? = null,
     var lat: Double? = null,
     var lon: Double? = null,

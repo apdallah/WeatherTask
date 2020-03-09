@@ -8,7 +8,7 @@ import com.apdallahy3.accenturetask.data.source.local.entities.WeatherModel
 interface WeatherDao {
 
     @Query("select * from weather_table")
-    fun getWeatherList():List<WeatherModel>
+    fun getWeatherList(): List<WeatherModel>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertWeather(weatherModel: WeatherModel)
@@ -16,11 +16,14 @@ interface WeatherDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertWeather(weatherModel: List<WeatherModel>)
 
-    @Query("select * from weather_table where lat=:lat and lon=:lon order by date desc limit 1")
-    fun getLatestWeather(lat: Double, lon: Double): LiveData<WeatherModel>
+    @Query("select * from weather_table order by date desc ")
+    fun getLatestWeather(): LiveData<List<WeatherModel>>
 
     @Update
     fun updateWeather(item: WeatherModel)
+
+    @Delete
+    suspend fun remove(item: WeatherModel)
 
 
 }

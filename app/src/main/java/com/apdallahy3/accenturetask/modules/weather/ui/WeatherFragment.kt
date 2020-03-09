@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.LOCATION_SERVICE
 import android.content.Intent
-import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Bundle
@@ -18,28 +17,27 @@ import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.LinearLayoutManager
 
 import com.apdallahy3.accenturetask.R
+import com.apdallahy3.accenturetask.data.source.local.entities.WeatherModel
+import com.apdallahy3.accenturetask.data.source.remote.Resource
 import com.apdallahy3.accenturetask.data.source.remote.Status
 import com.apdallahy3.accenturetask.databinding.FragmentWeatherBinding
 import com.apdallahy3.accenturetask.modules.weather.WeatherViewModel
 import com.apdallahy3.accenturetask.utils.Constants
 import com.apdallahy3.accenturetask.utils.SaveClickListner
-import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationSettingsResponse
-import com.google.android.gms.location.SettingsClient
-import com.google.android.gms.tasks.Task
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class WeatherFragment : Fragment(), SaveClickListner {
 
     lateinit var dataBinding: FragmentWeatherBinding
     private val REQUEST_LOCATION_PERMISION = 500
-    private val REQUEST_CHECK_SETTINGS = 600
     private val viewModel: WeatherViewModel by viewModel()
     private var view_type: Boolean = false
-
+    private lateinit var adapter: WeatherAdapter
+    private var dataList = ArrayList<WeatherModel>()
     @SuppressLint("NewApi")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -48,26 +46,15 @@ class WeatherFragment : Fragment(), SaveClickListner {
         dataBinding = DataBindingUtil.inflate(inflater, R.layout.fragment_weather, container, false)
         viewModel.locationManager = activity!!.getSystemService(LOCATION_SERVICE) as LocationManager
         viewModel.fusedLocation = LocationServices.getFusedLocationProviderClient(context!!)
+        dataBinding.weatherRecycler.layoutManager =
+            LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false)
         arguments?.let {
             view_type = it.getBoolean(Constants.VIEWTYPE_KEY)
         }
         observeWeatherInfo()
-        dataBinding.moreDetails.setOnClickListener {
-            navigateToDetails()
-        }
-        viewModel.weatherModel.observe(viewLifecycleOwner, Observer { weather ->
-            weather?.let {
-                it.temp = viewModel.getCelsiusFromKelvin(it.temp)
-                dataBinding.weather = it
-                dataBinding.executePendingBindings()
-            }
 
-        })
         if (checkPermissions()) {
-            if (isLocationEnabled()) {
-                viewModel.setLocationUpdateListener()
-
-            } else {
+            if (!isLocationEnabled()) {
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 startActivity(intent)
             }
@@ -81,14 +68,45 @@ class WeatherFragment : Fragment(), SaveClickListner {
                 REQUEST_LOCATION_PERMISION
             )
         }
+        initAdpater()
+        observeWeatherData()
         return dataBinding.root
 
     }
 
-    fun navigateToDetails() {
+    private fun initAdpater() {
+        val resource = Resource<List<WeatherModel>>(Status.SUCCESS, dataList, "")
+        adapter = WeatherAdapter(
+            context!!, resource,
+            onclickCallback = {
+                navigateToDetails(it)
+            },
+            removeCallback = {
+                viewModel.removeWeatherModel(it)
+
+
+            })
+        dataBinding.weatherRecycler.adapter = adapter
+
+    }
+
+    private fun observeWeatherData() {
+        viewModel.getWeatherData().observe(viewLifecycleOwner, Observer { data ->
+            data?.let { list ->
+                list.forEach { it.temp = viewModel.getCelsiusFromKelvin(it.temp) }
+                dataList.clear()
+                dataList.addAll(list)
+                adapter.notifyDataSetChanged()
+            }
+
+
+        })
+    }
+
+    fun navigateToDetails(model: WeatherModel) {
         val fragment = WeatherDetailsFragment.newInstance()
         val args = Bundle()
-        args.putParcelable("weather", viewModel.getWeatherModel())
+        args.putParcelable("weather", model)
         fragment.arguments = args
         if (view_type)
             activity!!.supportFragmentManager.beginTransaction().replace(
@@ -128,15 +146,15 @@ class WeatherFragment : Fragment(), SaveClickListner {
 
     private fun observeWeatherInfo() {
         viewModel.weatherResource.observe(viewLifecycleOwner, Observer {
+
             when (it.status) {
                 Status.LOADING -> {
                     showLoading()
                 }
-                Status.SUCCESS -> {
-                    hideLoading()
-                    viewModel.setWeatherModel(model = it.data)
-                }
                 Status.ERROR -> {
+                    hideLoading()
+                }
+                Status.SUCCESS -> {
                     hideLoading()
                 }
             }
@@ -144,12 +162,13 @@ class WeatherFragment : Fragment(), SaveClickListner {
     }
 
     private fun showLoading() {
-        dataBinding.progressBar.visibility = View.VISIBLE
+        dataBinding.loading.visibility = View.VISIBLE
     }
 
     private fun hideLoading() {
-        dataBinding.progressBar.visibility = View.GONE
+        dataBinding.loading.visibility = View.GONE
     }
+
 
     override fun onStop() {
         super.onStop()
@@ -164,7 +183,6 @@ class WeatherFragment : Fragment(), SaveClickListner {
     ) {
         Log.i("onRequestResult", requestCode.toString())
         if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            viewModel.setLocationUpdateListener()
         }
     }
 
@@ -176,6 +194,6 @@ class WeatherFragment : Fragment(), SaveClickListner {
 
 
     override fun onSaveClick() {
-        viewModel.fetchLocation()
+        viewModel.setLocationUpdateListener()
     }
 }

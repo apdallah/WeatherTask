@@ -15,14 +15,12 @@ class WeatherRepository(
     , private val database: WeatherDatabse
 ) {
     fun getWeeatherData(location: Location): LiveData<Resource<WeatherModel>> {
-        return object : NetworkBoundResource<WeatherModel, WeatherResponse>(coroutineContext) {
+        return object :
+            NetworkBoundResource<WeatherModel, WeatherResponse>(coroutineContext) {
             private var result: WeatherModel? = null
             override fun saveCallResult(item: WeatherResponse) {
                 val model = getWeatherModelFromReponse(location, item)
                 saveWeatherInfo(model)
-                result = model
-
-
             }
 
             override fun getResult(): WeatherModel? = result
@@ -37,7 +35,7 @@ class WeatherRepository(
 
             override fun shouldFetch(data: WeatherModel?): Boolean = true
 
-            override fun loadFromDb(): LiveData<WeatherModel>? = getLatestWeatherInfo(location)
+            override fun loadFromDb(): LiveData<WeatherModel>? = null
 
         }.asLiveData()
     }
@@ -48,7 +46,6 @@ class WeatherRepository(
     ): WeatherModel {
         Log.i("getWeatherModelF", response.main?.temp.toString())
         return WeatherModel(
-            id = response.id!!,
             name = response.name,
             lon = location.longitude,
             lat = location.latitude,
@@ -65,9 +62,14 @@ class WeatherRepository(
     private fun saveWeatherInfo(weatherModel: WeatherModel) {
         database.getWeatherDao().insertWeather(weatherModel)
     }
+   suspend fun removeModel(model: WeatherModel){
 
-    private fun getLatestWeatherInfo(location: Location): LiveData<WeatherModel> {
-        return database.getWeatherDao().getLatestWeather(location.latitude, location.longitude)
+        database.getWeatherDao().remove(model)
     }
+
+    fun getLatestWeatherInfo(): LiveData<List<WeatherModel>> {
+        return database.getWeatherDao().getLatestWeather()
+    }
+
 
 }
