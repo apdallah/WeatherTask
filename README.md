@@ -16,4 +16,5 @@
 <li>Room</li>
 <li>AndroidX</li>
 <li>Glide</li>
+<li>Databinding</li>
  </ul>
